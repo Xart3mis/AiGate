@@ -4,7 +4,7 @@ import joblib
 import face_recognition
 from sklearn.svm import SVC
 
-TRAIN_DIR = 'dataset/train/'
+TRAIN_DIR = '\\dataset\\train\\'
 persons = os.listdir(os.getcwd() + TRAIN_DIR)
 
 #cv2.imshow('face', cv2.imread('dataset/train/face_1/adhast.1.jpg'))
