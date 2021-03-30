@@ -19,13 +19,17 @@ def getName():
 
 while True:
     ret, frame = cap.read()
+
     small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
     face_locations = face_recognition.face_locations(small_frame)
+
     top = 0
     right = 0
     bottom = 0
     left = 0
+
     name = "unknown"
+
     try:
         getName()
         top, right, bottom, left = face_locations[0]
@@ -44,6 +48,8 @@ while True:
         cv2.putText(frame, name, (left, top),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
     cv2.namedWindow("face", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty(
+        'face', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     cv2.imshow('face', frame)
 
