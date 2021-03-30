@@ -5,10 +5,12 @@ import sys
 
 q = queue.Queue()
 
+
 def callback(indata, frames, time, status):
     if status:
         print(status, file=sys.stderr)
     q.put(bytes(indata))
+
 
 try:
     device_info = sd.query_devices(0, 'input')
@@ -16,14 +18,15 @@ try:
 
     model = vosk.Model("model")
 
-    with sd.RawInputStream(samplerate=samplerate, blocksize = 8000, device=0, dtype='int16', channels=1, callback=callback):
+    with sd.RawInputStream(samplerate=samplerate, blocksize=8000, device=0, dtype='int16', channels=1, callback=callback):
 
-            rec = vosk.KaldiRecognizer(model, samplerate)
-            while True:
-                data = q.get()
-                if rec.AcceptWaveform(data):
-                    result = rec.Result()[rec.Result().find('"text"').find('"',7)+1:-2]
-                    print("you said: " + result)
+        rec = vosk.KaldiRecognizer(model, samplerate)
+        while True:
+            data = q.get()
+            if rec.AcceptWaveform(data):
+                result = rec.Result()[rec.Result().find(
+                    '"text"').find('"', 7)+1:-2]
+                print("you said: " + result)
 
 except KeyboardInterrupt:
     print('\nDone')
