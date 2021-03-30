@@ -24,9 +24,10 @@ try:
         while True:
             data = q.get()
             if rec.AcceptWaveform(data):
-                result = rec.Result()[rec.Result().find(
-                    '"text"').find('"', 7)+1:-2]
-                print("you said: " + result)
+                    result = rec.Result()
+                    result = result[result.find('"text"'):-1]
+                    result = result[result.find('"',7)+1:-2]
+                    print("you said: " + result)
 
 except KeyboardInterrupt:
     print('\nDone')
