@@ -7,6 +7,8 @@ from functools import cache
 
 cap = cv2.VideoCapture(0)
 
+factor = 1
+
 clf = joblib.load('model.pkl')
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
@@ -14,7 +16,7 @@ predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 @cache
 def getName():
     for i in range(len(faces)):
-        frame_enc = face_recognition.face_encodings(frame)[i]
+        frame_enc = face_recognition.face_encodings(small_frame)[i]
         name = clf.predict([frame_enc])
         print(name[0])
 
@@ -29,10 +31,13 @@ def getFaceLandmarks():
     for n in range(0, 68):
         x = landmarks.part(n).x
         y = landmarks.part(n).y
+        x*=factor
+        y*=factor
         cv2.circle(img=frame, center=(x, y), radius=1, color=(0, 255, 0), thickness=-3)
 
 while True:
     ret, frame = cap.read()
+    small_frame = cv2.resize(frame, (0, 0), fx=(1/factor), fy=(1/factor))
 
     top = 0
     right = 0
@@ -41,15 +46,15 @@ while True:
 
     name = "Unknown"
 
-    gray = cv2.cvtColor(src=frame, code=cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(src=small_frame, code=cv2.COLOR_BGR2GRAY)
     faces = detector(gray)
     
     #Detects all faces
     for face in faces:
-        left = face.left()
-        top = face.top() 
-        right = face.right()
-        bottom = face.bottom()
+        left = face.left()*factor
+        top = face.top()*factor
+        right = face.right()*factor
+        bottom = face.bottom()*factor
 
         #Face identification
         try:
