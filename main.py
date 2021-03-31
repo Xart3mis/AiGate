@@ -5,11 +5,11 @@ import joblib
 import face_recognition
 from functools import cache
 
+cap = cv2.VideoCapture(0)
+
 clf = joblib.load('model.pkl')
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-
-cap = cv2.VideoCapture(0)
 
 @cache
 def getName():
@@ -18,14 +18,18 @@ def getName():
         name = clf.predict([frame_enc])
         print(name[0])
 
-@cache
+def drawFaces():
+    if top * right * bottom * left != 0:
+        cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 1)
+        cv2.rectangle(frame, (left, top-30), (right, top), (0, 255, 0), -1)
+        cv2.putText(frame, name, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
 def getFaceLandmarks():
     landmarks = predictor(image=gray, box=face)
     for n in range(0, 68):
         x = landmarks.part(n).x
         y = landmarks.part(n).y
-    return x, y
-
+        cv2.circle(img=frame, center=(x, y), radius=1, color=(0, 255, 0), thickness=-3)
 
 while True:
     ret, frame = cap.read()
@@ -53,15 +57,11 @@ while True:
         except IndexError:
             print("no faces")
 
-        if top * right * bottom * left != 0:
-            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 1)
-
-            cv2.rectangle(frame, (left, top-30), (right, top), (0, 255, 0), -1)
-            cv2.putText(frame, name, (left, top), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        drawFaces()
 
         #Detect facial landmarks    
-        x, y = getFaceLandmarks()
-        cv2.circle(img=frame, center=(x, y), radius=1, color=(0, 255, 0), thickness=-1)
+        getFaceLandmarks()
+
     cv2.namedWindow("face", cv2.WINDOW_NORMAL)
     cv2.setWindowProperty(
         'face', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
