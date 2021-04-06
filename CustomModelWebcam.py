@@ -1,12 +1,17 @@
 import os
 import cv2
+import time
 import joblib
+from FpsUp import *
 import face_recognition
 from functools import cache
 
-cap = cv2.VideoCapture(0)
+cap = VideoCaptureThreading(0)
+cap.start()
 
 clf = joblib.load('model.pkl')
+
+previousTime = 0
 
 
 @cache
@@ -18,7 +23,14 @@ def getName():
 
 
 while True:
+    currentTime = time.time()
+    fps = 1//(currentTime-previousTime)
+    previousTime = currentTime
+
     ret, frame = cap.read()
+
+    cv2.putText(frame, f"fps: {fps}", (30, 40),
+                cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 50), 2)
 
     small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
     face_locations = face_recognition.face_locations(small_frame)
@@ -54,5 +66,6 @@ while True:
     cv2.imshow('face', frame)
 
     if cv2.waitKey(1) & 0XFF == ord("q"):
+        cap.stop()
         cv2.destroyAllWindows()
-        cap.release()
+        break
