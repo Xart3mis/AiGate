@@ -14,6 +14,7 @@ detector = dlib.get_frontal_face_detector()
 
 previousTime = 0
 
+frameSkip = True
 process = True
 
 print("[INFO] starting video stream...")
@@ -31,7 +32,7 @@ while True:
                 cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 50), 2)
 
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    rgb = imutils.resize(frame, width=526)
+    rgb = imutils.resize(frame, width=426)
     gray = cv2.cvtColor(src=rgb, code=cv2.COLOR_BGR2GRAY)
     r = frame.shape[1] / float(rgb.shape[1])
 
@@ -47,7 +48,6 @@ while True:
         names = []
 
         for encoding in encodings:
-
             matches = face_recognition.compare_faces(data["encodings"],
                                                      encoding)
             name = "Unknown"
@@ -62,7 +62,9 @@ while True:
                 name = max(counts, key=counts.get)
 
             names.append(name)
-    process = not process
+
+    if frameSkip:
+        process = not process
 
     for ((top, right, bottom, left), name) in zip(boxes, names):
         top = int(top * r)
