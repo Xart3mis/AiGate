@@ -6,7 +6,7 @@ import dlib
 import time
 import cv2
 
-encodingsPath = "D:\Documents\GitHub\AiGate\Models\goodboi.pickle"
+encodingsPath = "/home/bighero/AiGate/Models/goodboi.pickle"
 
 print("[INFO] loading encodings...")
 data = pickle.loads(open(encodingsPath, "rb").read())
@@ -32,7 +32,7 @@ while True:
                 cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 50), 2)
 
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    rgb = imutils.resize(frame, width=426)
+    rgb = imutils.resize(frame, width=540)
     gray = cv2.cvtColor(src=rgb, code=cv2.COLOR_BGR2GRAY)
     r = frame.shape[1] / float(rgb.shape[1])
 

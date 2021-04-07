@@ -29,7 +29,7 @@ print("[INFO] starting video stream...")
 vs = VideoStream(src=0).start()
 time.sleep(2.0)
 
-
+@multitasking.task
 def getFaceLandmarks(_face):
     landmarks = predictor(image=gray, box=_face)
     for n in range(0, 68):
@@ -41,6 +41,15 @@ def getFaceLandmarks(_face):
                radius=1, color=(100, 255, 6), thickness=-3)
     return landmarks
 
+def getEyeCenter(arg):
+	landmarks = arg
+	x = landmarks.part(27).x
+	y = landmarks.part(27).y
+	x*=r
+	y*=r
+	eyeCenter = [int(x),int(y)]
+	cv2.circle(img=frame, center=(int(x), int(y)), radius=4, color=(0, 0, 255), thickness=-6)
+	return eyeCenter
 
 def drawFaces():
     cv2.rectangle(frame, (left, top), (right, bottom),
