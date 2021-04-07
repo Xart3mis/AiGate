@@ -1,6 +1,5 @@
 from imutils.video import VideoStream
 import face_recognition
-import multitasking
 import imutils
 import pickle
 import dlib
@@ -11,9 +10,7 @@ encodingsPath = "/home/bighero/AiGate/Models/yermam.pickle"
 
 print("[INFO] loading encodings...")
 data = pickle.loads(open(encodingsPath, "rb").read())
-
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 previousTime = 0
 
@@ -22,31 +19,6 @@ process = True
 print("[INFO] starting video stream...")
 vs = VideoStream(src=0).start()
 time.sleep(2.0)
-
-def getFaceLandmarks(_face):
-	landmarks = predictor(image=gray, box=_face)
-	for n in range(0, 68):
-		x = landmarks.part(n).x
-		y = landmarks.part(n).y
-		x*=factor
-		y*=factor
-		cv2.circle(img=frame, center=(int(x), int(y)), radius=1, color=(100, 255, 6), thickness=-3)
-	return landmarks
-
-def drawFaces():
-	if top * right * bottom * left != 0:
-		cv2.rectangle(frame, (int(left), int(top)), (int(right), int(bottom)), (0, 255, 0), 1)
-		cv2.rectangle(frame, (int(left), int(top-30)), (int(right), int(top)), (0, 255, 0), -1)
-		cv2.putText(frame, name, (int(left), int(top)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-
-@multitasking.task
-def getFaces():
-	dets = detector(gray)
-	boxes = []
-	for det in dets:
-		awooga = (det.top(), det.right(), det.bottom(), det.left())
-		boxes.append(awooga)
-	print(boxes)
 
 while True:
 	frame = vs.read()
@@ -62,9 +34,13 @@ while True:
 	rgb = imutils.resize(frame, width=526)
 	r = frame.shape[1] / float(rgb.shape[1])
 	
-	gray = cv2.cvtColor(src=small_frame, code=cv2.COLOR_BGR2GRAY)
-
-	getFaces()
+	dets = detector(rgb)
+	boxes = []
+	for det in dets:
+		awooga = (det.top(), det.right(), det.bottom(), det.left())
+		boxes.append(awooga)
+	print(boxes)
+				
 	
 	if process:
 		encodings = face_recognition.face_encodings(rgb, boxes)
@@ -93,8 +69,13 @@ while True:
 		right = int(right * r)
 		bottom = int(bottom * r)
 		left = int(left * r)
+
+		cv2.rectangle(frame, (left, top), (right, bottom),
+			(0, 255, 0), 2)
+		y = top - 15 if top - 15 > 15 else top + 15
 		
-		drawFaces()
+		cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,
+			0.75, (0, 255, 0), 2)
 	
 	cv2.imshow("Frame", frame)
 	key = cv2.waitKey(1) & 0xFF
@@ -104,3 +85,4 @@ while True:
 
 cv2.destroyAllWindows()
 vs.stop()
+
