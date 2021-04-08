@@ -1,0 +1,42 @@
+# AiGate/Tests/TestEncodingVideo.py: 5
+# AiGate/Tests/TestFaceLandmarks.py: 2
+# AiGate/main.py: 9
+dlib ~= 19.22.0
+
+# AiGate/Extras/Train.py: 6
+# AiGate/Tests/TestEncodingVideo.py: 2
+# AiGate/Tests/TestEncodings.py: 2
+# AiGate/main.py: 5
+face_recognition ~= 1.3.0
+
+# AiGate/Tests/TTS.py: 5
+gTTS ~= 2.2.2
+
+# AiGate/Extras/Train.py: 5
+# AiGate/Tests/TestEncodingVideo.py: 1,3
+# AiGate/main.py: 2,7
+imutils ~= 0.5.4
+
+# AiGate/Tests/TTS.py: 3
+# AiGate/main.py: 6
+multitasking ~= 0.0.9
+
+# AiGate/Extras/Train.py: 9
+# AiGate/Tests/TestEncodingVideo.py: 7
+# AiGate/Tests/TestEncodings.py: 5
+# AiGate/Tests/TestFaceLandmarks.py: 1
+# AiGate/main.py: 11
+opencv_python ~= 4.5.1.48
+
+# AiGate/Tests/TTS.py: 2
+python_vlc ~= 3.0.11115
+
+# AiGate/Tests/i2c_comm.py: 1
+# AiGate/main.py: 4
+smbus ~= 1.1.post2
+
+# AiGate/Tests/VoiceRecognition.py: 2
+sounddevice ~= 0.4.1
+
+# AiGate/Tests/VoiceRecognition.py: 3
+vosk ~= 0.3.21

@@ -1,230 +1,220 @@
-import os
-import cv2
-import numpy as np
-import dlib
-import joblib
-import face_recognition
-import pyttsx3
-import multitasking
-import time
-import signal
-import vlc
-
-import random
-from gtts import gTTS
-from time import sleep
-from smbus import SMBus
+print("[INFO] loading libraries...")
+from imutils.video import VideoStream
 from functools import cache
+from smbus import SMBus
+import face_recognition
+import multitasking
+import imutils
+import pickle
+import dlib
+import time
+import cv2
 
+#initializing model paths
+encodingsPath = "/home/bighero/AiGate/Models/Encodings.pickle"
+landmarksPath = "/home/bighero/AiGate/Models/shape_predictor_68_face_landmarks.dat"
 
-name = "Unknown" #return back later
-reject = False
-
+#initializing variables
 addr = 8
+
+factor = 1.2 #resize frame
+
+xmargin = 70 #pixel margin of error
+ymargin = 50 #pixel margin of error
+
+previousTime = 0
+
+#bools for frame skipping
+frameSkip = True
+process = True
+
+dets = []
+
+#loading face encodings
+print("[INFO] loading encodings...")
+data = pickle.loads(open(encodingsPath, "rb").read())
+detector = dlib.get_frontal_face_detector()
+
+#load face landmark shape predictor model
+print("[INFO] loading shape predictor...")
+predictor = dlib.shape_predictor(landmarksPath)
+
+#initialize I2C bus
+print("[INFO] initializing I2C bus...")
 bus = SMBus(0)
+i2cData = [0, 0]
 
-data = [0, 0]
+#start camera video stream
+print("[INFO] starting video stream...")
+vs = VideoStream(src=0).start()
+time.sleep(2.0)
 
-engine = pyttsx3.init()
-engine.setProperty('volume',0.25)
-engine.setProperty("rate", 120)
-talkQueue = True
-speechQueue = True
-
-cap = cv2.VideoCapture(0)
-
-ret, frame = cap.read()
+#get frame center
+frame = vs.read()
 height, width,_ = frame.shape
-
-xmargin = 70
-ymargin = 50
-
-factor = 1.2
-
 frameSqCenter = [int(width/2),int(height/2)]
 center = [frameSqCenter[0]+100,frameSqCenter[1]-50]
-faceCenter = center
 
-#clf = joblib.load('model.pkl')
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+#Draw boxes on detected faces
+def drawFaces(_left, _top, _right, _bottom, _name):
+	cv2.rectangle(frame, (_left, _top), (_right, _bottom), (0, 255, 0), 2)
 
-cv2.namedWindow("face", cv2.WINDOW_NORMAL)
-cv2.setWindowProperty('face', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+	y = _top - 15 if _top - 15 > 15 else _top + 15
+	cv2.putText(frame, _name, (_left, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
 
-@cache
-def getName(index):
-	frame_enc = face_recognition.face_encodings(small_rgb_frame)[index]
-	name = clf.predict([frame_enc])
-	print(name[0])
+#Identify and locate faces
+def getNames():
+
+	global dets
+	global process
 	
+	names = []
+
+	dets = detector(gray)
+	boxes = []
+	
+	###detect faces###
+	for det in dets:
+		face = (det.top(), det.right(), det.bottom(), det.left())
+		boxes.append(face)
+	#print(boxes)
+	
+	###face identification###
+	if process: #frame skipping
+		encodings = face_recognition.face_encodings(rgb, boxes)
+
+		###find matches### 
+		for encoding in encodings:
+		    matches = face_recognition.compare_faces(data["encodings"], encoding) #compare located faces to saved encodings
+		    name = "Unknown" #name defaults to "Unknown"
+		    
+			###check matches###
+		    if True in matches:
+		        matchedIdxs = [i for (i, b) in enumerate(matches) if b]
+		        counts = {}
+
+		        for i in matchedIdxs:
+		            name = data["names"][i]
+		            counts[name] = counts.get(name, 0) + 1
+		        name = max(counts, key=counts.get)
+
+		    names.append(name)
+
+	if frameSkip: #bool to disable/enable frame skipping
+		process = not process #skip every other frame to save performance
+		
+	for ((top, right, bottom, left), name) in zip(boxes, names):
+		top = int(top * r)
+		right = int(right * r)
+		bottom = int(bottom * r)
+		left = int(left * r)
+
+		drawFaces(left, top, right, bottom, name)
+
+#function that gets facial features of people in a frame
+def getFaceLandmarks(_face):
+	landmarks = predictor(image=gray, box=_face)
+	for n in range(0, 68): #loop over 68 face landmark points and draw a point
+		x = landmarks.part(n).x
+		y = landmarks.part(n).y
+		x *= r
+		y *= r
+		cv2.circle(img=frame, center=(int(x), int(y)), radius=1, color=(100, 255, 6), thickness=-3)
+	return landmarks
+
+#function that returns the largest face in a frame
 @cache
 def largestFace(_face):
-	X1 = int(_face.left()*factor)
-	Y1 = int(_face.top()*factor)
-	X2 = int(_face.right()*factor)
-	Y2 = int(_face.bottom()*factor)
+	X1 = int(_face.left()*r)
+	Y1 = int(_face.top()*r)
+	X2 = int(_face.right()*r)
+	Y2 = int(_face.bottom()*r)
 		
 	faceArea = (X2-X1)*(Y2-Y1)
 	
 	return faceArea
-		
-def drawFaces():
-	if top * right * bottom * left != 0:
-		cv2.rectangle(frame, (int(left), int(top)), (int(right), int(bottom)), (0, 255, 0), 1)
-		cv2.rectangle(frame, (int(left), int(top-30)), (int(right), int(top)), (0, 255, 0), -1)
-		cv2.putText(frame, name, (int(left), int(top)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-def getFaceLandmarks(_face):
-	landmarks = predictor(image=gray, box=_face)
-	for n in range(0, 68):
-		x = landmarks.part(n).x
-		y = landmarks.part(n).y
-		x*=factor
-		y*=factor
-		cv2.circle(img=frame, center=(int(x), int(y)), radius=1, color=(100, 255, 6), thickness=-3)
-	return landmarks
-
+#function tha gets eye center from landmarks
 def getEyeCenter(arg):
 	landmarks = arg
+	###landmark 27 is between the eyes.
 	x = landmarks.part(27).x
 	y = landmarks.part(27).y
-	x*=factor
-	y*=factor
+	x*=r
+	y*=r
 	eyeCenter = [int(x),int(y)]
 	cv2.circle(img=frame, center=(int(x), int(y)), radius=4, color=(0, 0, 255), thickness=-6)
 	return eyeCenter
 
-@multitasking.task
-def talk(message,timer):
-
-	global speechQueue
-	
-	while not(speechQueue):
-		pass
+#send data to microcontroller using I2C to move head
+def MoveHead(_eyeCenter):
+	if(_eyeCenter[0] < (center[0] - xmargin)):
+		i2cData[0] = 1
+		#print("left")
 		
-	speechQueue = False
-	
-	sleep(timer)	
-
-	name = "output.mp3"
-	
-	tts= gTTS(text=message, lang='en')
-	tts.save(name)
-
-	media = vlc.MediaPlayer(name)
-	duration = abs(media.get_length())
-	media.play()
-	sleep(duration)
-	os.remove(name)
-	
-	speechQueue = True
-
-def MoveHead():
-	if(faceCenter[0] < (center[0] - xmargin)):
-		data[0] = 1
-		print("left")
-		
-	elif(faceCenter[0] > (center[0] + xmargin)):
-		data[0] = 2
-		print("right")
+	elif(_eyeCenter[0] > (center[0] + xmargin)):
+		i2cData[0] = 2
+		#print("right")
 		
 	else:
-		data[0] = 0
-		print("stop_w")
+		i2cData[0] = 0
+		#print("stop_w")
 
-	if(faceCenter[1] < (center[1] - ymargin)):
-		data[1] = 1
-		print("up")
+	if(_eyeCenter[1] < (center[1] - ymargin)):
+		i2cData[1] = 1
+		#print("up")
 		
-	elif(faceCenter[1] > (center[1] + ymargin)):
-		data[1] = 2
-		print("down")
+	elif(_eyeCenter[1] > (center[1] + ymargin)):
+		i2cData[1] = 2
+		#print("down")
 		
 	else:
-		data[1] = 0
-		print("stop_h")    
+		i2cData[1] = 0
+		#print("stop_h")
+		
+	print(i2cData)
+	bus.write_i2c_block_data(addr, 0, i2cData) #Send data over i2c
 
-while cap.isOpened():
-	ret, frame = cap.read()
+#Read frames and process
+while True:
+	#getting camera frames
+	frame = vs.read()
 	frame = cv2.flip(frame,1)
-	small_frame = cv2.resize(frame, (0, 0), fx=(1/factor), fy=(1/factor))
-	small_rgb_frame = small_frame[:, :, ::-1]
-	frame = cv2.circle(frame, (center[0], center[1]), 2, (0, 0, 255), -4)
-
-	top = 0
-	right = 0
-	bottom = 0
-	left = 0
-
-	gray = cv2.cvtColor(src=small_frame, code=cv2.COLOR_BGR2GRAY)
-	faces = detector(gray)
-    
-	i=0
-    
-	#Detects all faces
-	for face in faces:
-		left = int(face.left()*factor)
-		top = int(face.top()*factor)
-		right = int(face.right()*factor)
-		bottom = int(face.bottom()*factor)
-		
-		#print(f"X1 [{left}]  Y1 [{top}]  X2 [{right}]  Y2 [{bottom}]")
-		
-		#Face identification
-		
-		i+=1
-		"""
-		try:
-			getName(i)
-		except IndexError:
-			print("no faces")
-		"""
-		drawFaces()
-		
-        #Detect facial landmarks    
-		#getFaceLandmarks(face)
 	
-	try:
-		ClosestFace = sorted(faces, key=largestFace, reverse=True)[0]
-		landmarks = getFaceLandmarks(ClosestFace)
-		faceCenter = getEyeCenter(landmarks)
-		MoveHead()
-		
-		if data[0] == 0 and data [1] == 0:
-			if talkQueue:
-				#bus.write_i2c_block_data(addr, 0, [0, 0])
+	#Draw offset frame center for reference
+	cv2.circle(frame, (center[0], center[1]), 2, (0, 0, 255), -4)
+	
+	#grab frame delta
+	currentTime = time.time()
+	fps = 1//(currentTime-previousTime)
+	previousTime = currentTime
+	cv2.putText(frame, f"fps: {fps}", (30, 40), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 50), 2)
 
-				talk("hello, please stand still",0)
-				talk("scanning complete",1)
-				
-				if reject:			
-					talk("sorry, you are not allowed to enter ",1.5)
-					name = "Unkown"
-					drawFaces()
-					
-				else:
-					talk("please enter",1.5)
-					name = "Seif zayed"
-					drawFaces()
-					reject = True
-					
-				talkQueue = False			
-				
-		else:
-			name = "Unknown"
-			talkQueue = True
-			
+	#resize frame to process less pixels
+	rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+	rgb = cv2.resize(frame, (0, 0), fx=(1/factor), fy=(1/factor))
+	gray = cv2.cvtColor(src=rgb, code=cv2.COLOR_BGR2GRAY)
+	r = frame.shape[1] / float(rgb.shape[1])
+
+	#face recognition and identification
+	try:
+		getNames()
+		ClosestFace = sorted(dets, key=largestFace, reverse=True)[0] #sort by face area
+		landmarks = getFaceLandmarks(ClosestFace) #process landmarks for only closest face to save performance
+		EyeCenter = getEyeCenter(landmarks)
+		#MoveHead(EyeCenter)
+	
 	except IndexError:
 		print("no faces")
-		data[0] = 0
-		data[1] = 0
+		i2cData = [0, 0]
 		
-	#bus.write_i2c_block_data(addr, 0, data)
-		
+	#show frames
+	cv2.imshow("Frame", frame)
+	key = cv2.waitKey(1) & 0xFF
 
-	cv2.imshow('face', frame)
+	#quit code when 'q' is pressed
+	if key == ord("q"):
+		break
 
-	if cv2.waitKey(1) & 0XFF == ord("q"):
-		cv2.destroyAllWindows()
-		cap.release()
+cv2.destroyAllWindows() #destroy all windows
+vs.stop() #stop reading from camera
