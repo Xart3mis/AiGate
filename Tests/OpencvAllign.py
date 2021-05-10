@@ -6,11 +6,10 @@ import time
 import dlib
 import cv2
 
-prototxt = "/home/bighero/AiGate/Models/deploy.prototxt.txt"
-model = "/home/bighero/AiGate/Models/res10_300x300_ssd_iter_140000.caffemodel"
-landmarksModelPath = "/home/bighero/AiGate/Models/shape_predictor_68_face_landmarks.dat"
-eyeCascadePath = "/home/bighero/AiGate/Models/haarcascade_eye.xml"
-confidenceThresh = 0.735
+prototxt = "D:\\Documents\\Python\\AiGate\\Models\\deploy.prototxt.txt"
+model = "D:\\Documents\\Python\\AiGate\\Models\\res10_300x300_ssd_iter_140000.caffemodel"
+landmarksModelPath = "D:\\Documents\\Python\\AiGate\\Models\\shape_predictor_68_face_landmarks_GTX.dat"
+confidenceThresh = 0.55
 
 print("[INFO] loading models...")
 net = cv2.dnn.readNetFromCaffe(prototxt, model)
@@ -26,13 +25,45 @@ time.sleep(2.0)
 def getEyes(imgGray, face):
     landmarks = predictor(image=imgGray, box=face)
 
-    upper1x = int((landmarks.part(38).x+landmarks.part(39).x)/2)
-    upper2x = int((landmarks.part(42).x+landmarks.part(41).x)/2)
+    x1Left = int((landmarks.part(38).x + landmarks.part(39).x)/2)
+    y1Left = int((landmarks.part(38).y + landmarks.part(39).y)/2)
+    x2Left = int((landmarks.part(42).x + landmarks.part(41).x)/2)
+    y2Left = int((landmarks.part(42).y + landmarks.part(41).y)/2)
+    x3Left = int(landmarks.part(37).x)
+    y3Left = int(landmarks.part(37).y)
+    x4Left = int(landmarks.part(40).x)
+    y4Left = int(landmarks.part(40).y)
 
-    upper1y = int((landmarks.part(38).y+landmarks.part(39).y)/2)
-    upper2y = int((landmarks.part(42).y+landmarks.part(41).y)/2)
+    x1Right = int((landmarks.part(44).x + landmarks.part(45).x)/2)
+    y1Right = int((landmarks.part(44).y + landmarks.part(45).y)/2)
+    x2Right = int((landmarks.part(48).x + landmarks.part(47).x)/2)
+    y2Right = int((landmarks.part(48).y + landmarks.part(47).y)/2)
+    x3Right = int(landmarks.part(43).x)
+    y3Right = int(landmarks.part(43).y)
+    x4Right = int(landmarks.part(46).x)
+    y4Right = int(landmarks.part(46).y)
 
-    eyes = {"left": (int((upper1x+upper2x)/2), int((upper1y+upper2y)/2))}
+    leftD = (x1Left-x2Left)*(y3Left-y4Left)-(y1Left-y2Left)*(x3Left-x4Left)
+    rightD = (x1Right-x2Right)*(y3Right-y4Right) - \
+        (y1Right-y2Right)*(x3Right-x4Right)
+
+    PxLeft = int(((x1Left*y2Left-y1Left*x2Left) *
+                  (x3Left-x4Left)-(x1Left-x2Left)*(x3Left*y4Left-y3Left*x4Left))/leftD)
+
+    PyLeft = int(((x1Left*y2Left-y1Left*x2Left) *
+                  (y3Left-y4Left)-(y1Left-y2Left)*(x3Left*y4Left-y3Left*x4Left))/leftD)
+
+    PxRight = int(((x1Right*y2Right-y1Right*x2Right) *
+                  (x3Right-x4Right)-(x1Right-x2Right)*(x3Right*y4Right-y3Right*x4Right))/rightD)
+
+    PyRight = int(((x1Right*y2Right-y1Right*x2Right) *
+                  (y3Right-y4Right)-(y1Right-y2Right)*(x3Right*y4Right-y3Right*x4Right))/rightD)
+
+    eyes = {"left": (PxLeft, PyLeft), "right": (PxRight, PyRight)}
+
+    for i in range(68):
+        cv2.circle(frame, (landmarks.part(i).x, landmarks.part(i).y),
+                   1, (255, 0, 200), -1)
 
     return eyes
 
@@ -67,10 +98,12 @@ while True:
         drect = dlib.rectangle(int(x), int(y), int(x+w), int(y+h))
         eyes = getEyes(frame_gray, drect)
 
-        img = cv2.circle(frame, eyes["left"], 3, (255, 255, 50), -1)
-        print(eyes["left"])
+        cv2.circle(frame, eyes["left"], 3, (255, 255, 50), -1)
+        cv2.circle(frame, eyes["right"], 3, (255, 255, 50), -1)
+        print(eyes["left"], eyes["right"])
 
     cv2.imshow("Face", img)
+    cv2.imshow("Facwe", frame)
     key = cv2.waitKey(1) & 0xFF
 
     if key == ord("q"):
