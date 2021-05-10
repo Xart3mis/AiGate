@@ -1,4 +1,5 @@
 /dataset/
 shape_predictor_68_face_landmarks.dat
+shape_predictor_68_face_landmarks_GTX.dat
 /__pycache__
 /FaceRecognition
