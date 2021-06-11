@@ -6,7 +6,7 @@ import dlib
 import time
 import cv2
 
-encodingsPath = "/home/bighero/AiGate/Models/goodboi.pickle"
+encodingsPath = "/home/bighero/AiGate/Models/Encodings.pickle"
 
 print("[INFO] loading encodings...")
 data = pickle.loads(open(encodingsPath, "rb").read())

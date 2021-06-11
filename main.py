@@ -15,8 +15,8 @@ import cv2
 import os
 
 #initializing model paths
-encodingsPath = "/home/bighero/AiGate/Models/Encodings.pickle"
-landmarksPath = "/home/bighero/AiGate/Models/shape_predictor_68_face_landmarks.dat"
+encodingsPath = "/home/bighero/AiGateBak/Models/Encodings.pickle"
+landmarksPath = "/home/bighero/AiGateBak/Models/shape_predictor_68_face_landmarks.dat"
 
 #initializing variables
 addr = 8
